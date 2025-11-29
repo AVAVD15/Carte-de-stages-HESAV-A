@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <title>Carte interactive – stage – ESA – volée 1</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      width: 100%;
+    }
+    #controls {
+      padding: 8px 10px;
+      background: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    #controls h1 {
+      font-size: 16px;
+      margin: 0 0 4px 0;
+    }
+    #controls .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+    #controls label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    #controls .info {
+      font-size: 12px;
+      color: #555;
+    }
+    #map {
+      flex: 1;
+      width: 100%;
+    }
+    .marker-num {
+      background: #d33;
+      color: #fff;
+      border-radius: 16px;
+      padding: 2px 6px;
+      font-size: 13px;
+      font-weight: bold;
+      border: 2px solid #fff;
+      box-shadow: 0 0 4px rgba(0,0,0,0.4);
+      text-align: center;
+      line-height: 1.2;
+    }
+    .popup-inst {
+      margin-bottom: 6px;
+    }
+    .popup-inst:last-child {
+      margin-bottom: 0;
+    }
+    .popup-inst-name {
+      font-weight: 600;
+    }
+    .popup-inst-addr {
+      font-size: 12px;
+      color: #555;
+      margin-bottom: 2px;
+    }
+    .popup-inst-domain {
+      font-size: 12px;
+      margin-left: 8px;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div id="controls">
+    <h1>Carte interactive – stage – ESA – volée 1</h1>
+    <div class="filters">
+      <span>Filtres domaines&nbsp;:</span>
+      <label><input type="checkbox" value="MSQ"> MSQ</label>
+      <label><input type="checkbox" value="Neuro"> Neuro</label>
+      <label><input type="checkbox" value="CardioResp"> Cardio-respiratoire</label>
+      <label><input type="checkbox" value="Geriatrie"> Gériatrie</label>
+      <label><input type="checkbox" value="Autre"> Autre spécialisation</label>
+      <label><input type="checkbox" value="Aigu"> Aigu</label>
+      <label><input type="checkbox" value="CentreReadapt"> Centre de réadaptation</label>
+      <label><input type="checkbox" value="Ambulatoire"> Ambulatoire</label>
+      <button id="resetBtn" type="button">Réinitialiser</button>
+    </div>
+    <div class="info">
+      Cocher un ou plusieurs domaines pour n'afficher que les lieux qui les proposent.<br>
+      Un lieu reste affiché seulement s'il possède <strong>tous</strong> les domaines sélectionnés.
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+<script>
+  // Données des marqueurs (groupés par adresse)
+  const markersData = [{"address": "Chemin de Clamogne 4, 1170 Aubonne, Suisse", "count": 1, "institutions": [{"name": "Aquamed Centres de physiothérapie - Aubonne", "adresse": "Chemin de Clamogne 4", "localite": "1170 Aubonne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Rue de la Croix de Montet 2, 1616 Attalens, Suisse", "count": 1, "institutions": [{"name": "Cabinet Audrey Schneiter Physiothérapie à domicile", "adresse": "Rue de la Croix de Montet 2", "localite": "1616 Attalens", "canton": "Fribourg", "MSQ": 1.0, "Neuro": 0.5, "CardioResp": null, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Route du Châtelet 8 Case Postale 55, 1723 Marly, Suisse", "count": 1, "institutions": [{"name": "Cabinet de Physiothérapie Cuennet JMC Sàrl", "adresse": "Route du Châtelet 8 Case Postale 55", "localite": "1723 Marly", "canton": "Fribourg", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Route de Billens 8, 1680 Romont FR, Suisse", "count": 1, "institutions": [{"name": "Cabinet de physiothérapie la Colline", "adresse": "Route de Billens 8", "localite": "1680 Romont FR", "canton": "Fribourg", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Route du Midi 12, 1723 Marly, Suisse", "count": 1, "institutions": [{"name": "Centre ITS - site de Marly", "adresse": "Route du Midi 12", "localite": "1723 Marly", "canton": "Fribourg", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Av. de Bois-Bougy 6, 1260 Nyon, Suisse", "count": 1, "institutions": [{"name": "Clinique Bois-Bougy Nyon", "adresse": "Av. de Bois-Bougy 6", "localite": "1260 Nyon", "canton": "Vaud", "MSQ": 1.0, "Neuro": 0.5, "CardioResp": 0.5, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Avenue d'Ouchy 31, 1006 Lausanne, Suisse", "count": 1, "institutions": [{"name": "Clinique Bois-Cerf - service de Physiothérapie", "adresse": "Avenue d'Ouchy 31", "localite": "1006 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": 0.5}]}, {"address": "Av. Grand-Champsec 90, 1950 Sion, Suisse", "count": 2, "institutions": [{"name": "Clinique romande de réadaptation SUVA - Neurologie (L3)", "adresse": "Av. Grand-Champsec 90", "localite": "1950 Sion", "canton": "Valais", "MSQ": null, "Neuro": 1.0, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}, {"name": "Clinique romande de réadaptation/service de physio", "adresse": "Av. Grand-Champsec 90", "localite": "1950 Sion", "canton": "Valais", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Avenue Pierre-Decker 4, 1011 Lausanne, Suisse", "count": 2, "institutions": [{"name": "CHUV-DAL - Physiothérapie - Hôpital orthopédique (DAL6)", "adresse": "Avenue Pierre-Decker 4", "localite": "1011 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}, {"name": "CHUV-DAL - Physiothérapie - Traumatologie BH14 (DAL6)", "adresse": "Avenue Pierre-Decker 4", "localite": "1011 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 0.5, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "Chemin de Sylvana 10, 1066 Epalinges, Suisse", "count": 1, "institutions": [{"name": "CHUV- Physiothérapie CUTR Sylvana", "adresse": "Chemin de Sylvana 10", "localite": "1066 Epalinges", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Rue du Bugnon 46, 1011 Lausanne, Suisse", "count": 3, "institutions": [{"name": "CHUV-DM - DMI6 - Physiothérapie Médecine Interne", "adresse": "Rue du Bugnon 46", "localite": "1011 Lausanne", "canton": "Vaud", "MSQ": null, "Neuro": null, "CardioResp": 1.0, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}, {"name": "CHUV-DNC - DDN6 - Physiothérapie Neurologie-Neurochirurgie (site BH 13)", "adresse": "Rue du Bugnon 46", "localite": "1011 Lausanne", "canton": "Vaud", "MSQ": null, "Neuro": 1.0, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}, {"name": "CHUV- Physiothérapie Neuroréhabilitation Nestlé ", "adresse": "Rue du Bugnon 46", "localite": "1011 Lausanne", "canton": "Vaud", "MSQ": null, "Neuro": 1.0, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Campus Léman Bat C Rue Docteur-Yersin 12a, 1110 Morges, Suisse", "count": 1, "institutions": [{"name": "EHC - GO2 Centre romand de chirurgie et médecine du sport et des arts pour les 10-20 ans +", "adresse": "Campus Léman Bat C Rue Docteur-Yersin 12a", "localite": "1110 Morges", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Ch. de Crêt 2 Case postale 393, 1110 Morges, Suisse", "count": 1, "institutions": [{"name": "EHC - Hôpital de Morges - Physiothérapie", "adresse": "Ch. de Crêt 2 Case postale 393", "localite": "1110 Morges", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": 0.5}]}, {"address": "Magnenette 2, 1350 Orbe, Suisse", "count": 1, "institutions": [{"name": "EHNV - Hôpital d'Orbe - CTR -Physiothérapie", "adresse": "Magnenette 2", "localite": "1350 Orbe", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Rue d'Entremonts 11, 1400 Yverdon-les-Bains, Suisse", "count": 1, "institutions": [{"name": "EHNV - Site d'Yverdon - Physiothérapie", "adresse": "Rue d'Entremonts 11", "localite": "1400 Yverdon-les-Bains", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "St-Loup 1, 1318 Pompaples, Suisse", "count": 1, "institutions": [{"name": "EHNV- Hôpital de Saint-Loup - Physiothérapie", "adresse": "St-Loup 1", "localite": "1318 Pompaples", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": 0.5, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "Ch. Monastier 10, 1260 Nyon, Suisse", "count": 1, "institutions": [{"name": "GHOL - Hôpital de Nyon - Physiothérapie", "adresse": "Ch. Monastier 10", "localite": "1260 Nyon", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": 0.5, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "Route de l'Hôpital 26, 1180 Rolle, Suisse", "count": 1, "institutions": [{"name": "GHOL - Hôpital de Rolle", "adresse": "Route de l'Hôpital 26", "localite": "1180 Rolle", "canton": "Vaud", "MSQ": null, "Neuro": null, "CardioResp": 1.0, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Chem. des Pensionnats 2/6,, 1752 Villars-sur-Glâne, Suisse", "count": 1, "institutions": [{"name": "HFR -FR - Physiothérapie", "adresse": "Chem. des Pensionnats 2/6,", "localite": "1752 Villars-sur-Glâne", "canton": "Fribourg", "MSQ": null, "Neuro": null, "CardioResp": 1.0, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "Rue de l'Hôpital 9, 1632 Riaz, Suisse", "count": 1, "institutions": [{"name": "HFR - RI - Physiothérapie", "adresse": "Rue de l'Hôpital 9", "localite": "1632 Riaz", "canton": "Fribourg", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": 1.0, "Autre": null, "Aigu": 0.5, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Rue de la Rochette, 1470 Estavayer-le-Lac, Suisse", "count": 1, "institutions": [{"name": "HIB - Site d'Estavayer-le-Lac - Physiothérapie", "adresse": "Rue de la Rochette", "localite": "1470 Estavayer-le-Lac", "canton": "Fribourg", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Avenue de la Colline 3 / Case postale 192, 1530 Payerne, Suisse", "count": 1, "institutions": [{"name": "HIB - Site de Payerne - Physiothérapie", "adresse": "Avenue de la Colline 3 / Case postale 192", "localite": "1530 Payerne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "Ch. des Colombaires 31, 1096 Cully, Suisse", "count": 1, "institutions": [{"name": "Hôpital de Lavaux - Physiothérapie", "adresse": "Ch. des Colombaires 31", "localite": "1096 Cully", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Avenue de la Prairie 3, 1800 Vevey, Suisse", "count": 1, "institutions": [{"name": "HRC - Hôpital Riviera Chablais - site providence - Physiothérapie", "adresse": "Avenue de la Prairie 3", "localite": "1800 Vevey", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Route du Vieux Sequoia 30, 1847 Rennaz, Suisse", "count": 1, "institutions": [{"name": "HRC - Site de Rennaz - Rennaz 1 : Orthopédie-Traumatologie/Chirurgie générale/Gynéco-obstétrique/Pédiatrie/Ambulatoire", "adresse": "Route du Vieux Sequoia 30", "localite": "1847 Rennaz", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": 1.0, "CentreReadapt": null, "Ambulatoire": null}]}, {"address": "Route de Vignoble 60, 1175 Lavigny, Suisse", "count": 1, "institutions": [{"name": "Institution de Lavigny - Physiothérapie, site de Lavigny", "adresse": "Route de Vignoble 60", "localite": "1175 Lavigny", "canton": "Vaud", "MSQ": null, "Neuro": 1.0, "CardioResp": null, "Geriatrie": 0.5, "Autre": null, "Aigu": null, "CentreReadapt": 1.0, "Ambulatoire": null}]}, {"address": "Avenue Jomini 8, 1004 Lausanne, Suisse", "count": 1, "institutions": [{"name": "La Source Fitphysio - site clinique La Source", "adresse": "Avenue Jomini 8", "localite": "1004 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Route de Chavannes 9A, 1007 Lausanne, Suisse", "count": 1, "institutions": [{"name": "La Source Fitphysio - site de Vidymed", "adresse": "Route de Chavannes 9A", "localite": "1007 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Route des Bains 50, 1892 Lavey-les-Bains, Suisse", "count": 1, "institutions": [{"name": "Lavey Médical SA", "adresse": "Route des Bains 50", "localite": "1892 Lavey-les-Bains", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Av. de l'Avant-Poste 4, 1005 Lausanne, Suisse", "count": 1, "institutions": [{"name": "Cabinet Physio 7", "adresse": "Av. de l'Avant-Poste 4", "localite": "1005 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Chemin du Petit-Flon 29 1052 Le Mont-sur-Lausanne, 1000 Lausanne, Suisse", "count": 1, "institutions": [{"name": "Motion Lab Pôle Physiothérapie", "adresse": "Chemin du Petit-Flon 29 1052 Le Mont-sur-Lausanne", "localite": "1000 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Rue Margencel 5C, 1860 Aigle, Suisse", "count": 1, "institutions": [{"name": "Physio Clinics Vaud - site d'Aigle", "adresse": "Rue Margencel 5C", "localite": "1860 Aigle", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Rue du Lac 64, 1815 Clarens, Suisse", "count": 1, "institutions": [{"name": "Physio Clinics Vaud - site de Clarens", "adresse": "Rue du Lac 64", "localite": "1815 Clarens", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Boulevard de Grancy 19 A, 1006 Lausanne, Suisse", "count": 1, "institutions": [{"name": "Physio Clinics Vaud - site de Lausanne", "adresse": "Boulevard de Grancy 19 A", "localite": "1006 Lausanne", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": null, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Route de l'Hôpital 17, 1660 Château-d'Oex, Suisse", "count": 1, "institutions": [{"name": "Pôle Santé Pays d'Enhaut - PSPE", "adresse": "Route de l'Hôpital 17", "localite": "1660 Château-d'Oex", "canton": "Vaud", "MSQ": 0.5, "Neuro": 0.5, "CardioResp": 0.5, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": 0.5, "Ambulatoire": 0.5}]}, {"address": "Rue de l'Hôpital 3, 1347 Le Sentier, Suisse", "count": 1, "institutions": [{"name": "Pôle Santé Vallée de Joux", "adresse": "Rue de l'Hôpital 3", "localite": "1347 Le Sentier", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Chemin de la Charrettaz 6, 1094 Paudex, Suisse", "count": 1, "institutions": [{"name": "ProMove santé sàrl", "adresse": "Chemin de la Charrettaz 6", "localite": "1094 Paudex", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": null, "Geriatrie": 0.5, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}, {"address": "Rue des Rosiers 29, 1450 Ste-Croix, Suisse", "count": 1, "institutions": [{"name": "Réseau Santé Balcon du Jura", "adresse": "Rue des Rosiers 29", "localite": "1450 Ste-Croix", "canton": "Vaud", "MSQ": 1.0, "Neuro": null, "CardioResp": 0.5, "Geriatrie": 1.0, "Autre": null, "Aigu": null, "CentreReadapt": null, "Ambulatoire": 1.0}]}];
+
+  // Coordonnées forcées pour certaines adresses où le géocodage est imprécis
+  const manualCoords = {
+    "Campus Léman Bat C Rue Docteur-Yersin 12a, 1110 Morges, Suisse": [46.50894, 6.49382],
+    "Ch. de Crêt 2 Case postale 393, 1110 Morges, Suisse": [46.50954, 6.49525]
+  };
+
+  // Dictionnaire des labels pour les domaines
+  const domainLabels = {
+    MSQ: "MSQ",
+    Neuro: "Neuro",
+    CardioResp: "Cardio-respiratoire",
+    Geriatrie: "Gériatrie",
+    Autre: "Autre spécialisation",
+    Aigu: "Aigu",
+    CentreReadapt: "Centre de réadaptation",
+    Ambulatoire: "Ambulatoire"
+  };
+
+  const map = L.map('map').setView([46.8, 6.6], 8);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; Contributeurs OpenStreetMap'
+  }).addTo(map);
+
+  const clusterGroup = L.markerClusterGroup();
+  const allMarkers = [];
+
+  function geocodeAddress(address) {
+    // Priorité aux coordonnées définies manuellement
+    if (manualCoords[address]) {
+      return Promise.resolve(manualCoords[address]);
+    }
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&q=' +
+      encodeURIComponent(address) + '&limit=1&countrycodes=ch';
+    return fetch(url, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+        return null;
+      })
+      .catch(() => null);
+  }
+
+  function buildPopupHtml(entry) {
+    const insts = entry.institutions;
+    let html = '<div>';
+    if (insts.length > 1) {
+      html += '<div style="font-size:12px;color:#555;margin-bottom:4px;">' +
+              insts.length + ' lieux de stage à cette adresse</div>';
+    }
+    insts.forEach((inst, idx) => {
+      html += '<div class="popup-inst">';
+      html += '<div class="popup-inst-name">' + inst.name + '</div>';
+      html += '<div class="popup-inst-addr">' +
+              inst.adresse + ', ' + inst.localite + ' (' + inst.canton + ')</div>';
+      html += '<div class="popup-inst-domain">';
+      let hasDomain = false;
+      Object.keys(domainLabels).forEach(key => {
+        const v = inst[key];
+        if (v !== null && v !== undefined && !Number.isNaN(v) && v !== 0) {
+          hasDomain = true;
+          const label = domainLabels[key];
+          const suffix = (v === 1 ? " point" : " points");
+          html += label + ' : ' + v + suffix + '<br>';
+        }
+      });
+      if (!hasDomain) {
+        html += '<span style="color:#777;">Aucun domaine avec points enregistrés.</span>';
+      }
+      html += '</div>';
+      html += '</div>';
+      if (idx < insts.length - 1) {
+        html += '<hr style="margin:4px 0;">';
+      }
+    });
+    html += '</div>';
+    return html;
+  }
+
+  function markerMatchesDomains(entry, activeDomains) {
+    if (activeDomains.length === 0) return true;
+    // Le lieu doit avoir tous les domaines cochés (au moins un stage avec des points pour chacun)
+    return activeDomains.every(domainKey => {
+      return entry.institutions.some(inst => {
+        const v = inst[domainKey];
+        return v !== null && v !== undefined && !Number.isNaN(v) && v !== 0;
+      });
+    });
+  }
+
+  function applyFilters() {
+    const checkboxes = document.querySelectorAll('#controls input[type="checkbox"]');
+    const active = [];
+    checkboxes.forEach(cb => { if (cb.checked) active.push(cb.value); });
+
+    clusterGroup.clearLayers();
+    const bounds = [];
+
+    allMarkers.forEach(item => {
+      const entry = item.entry;
+      if (markerMatchesDomains(entry, active)) {
+        clusterGroup.addLayer(item.marker);
+        bounds.push(item.coords);
+      }
+    });
+
+    if (!map.hasLayer(clusterGroup)) {
+      map.addLayer(clusterGroup);
+    }
+
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    }
+  }
+
+  async function initMarkers() {
+    const bounds = [];
+    for (let i = 0; i < markersData.length; i++) {
+      const entry = markersData[i];
+      const coords = await geocodeAddress(entry.address);
+      if (!coords) continue;
+      const [lat, lng] = coords;
+      const icon = L.divIcon({
+        className: 'marker-num',
+        html: String(entry.count),
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+      });
+      const marker = L.marker([lat, lng], { icon });
+      marker.bindPopup(buildPopupHtml(entry));
+      allMarkers.push({ marker, entry, coords });
+      bounds.push(coords);
+    }
+
+    applyFilters();
+
+    if (bounds.length > 0) {
+      map.fitBounds(bounds, { padding: [30, 30] });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initMarkers();
+
+    const checkboxes = document.querySelectorAll('#controls input[type="checkbox"]');
+    checkboxes.forEach(cb => {
+      cb.addEventListener('change', applyFilters);
+    });
+
+    const resetBtn = document.getElementById('resetBtn');
+    resetBtn.addEventListener('click', () => {
+      checkboxes.forEach(cb => { cb.checked = false; });
+      applyFilters();
+    });
+  });
+</script>
+</body>
+</html>

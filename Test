@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Carte interactive des stages – demi-volée A</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
+  />
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
+  />
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    #filters {
+      padding: 8px 12px;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ddd;
+      font-size: 0.9rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      align-items: center;
+    }
+    #filters span.label {
+      font-weight: 600;
+      margin-right: 6px;
+    }
+    #filters label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background-color 0.15s ease;
+    }
+    #filters label:hover {
+      background-color: #e8e8e8;
+    }
+    #map {
+      flex: 1;
+      width: 100%;
+    }
+    .popup-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .popup-address {
+      margin-bottom: 4px;
+      font-size: 0.9rem;
+    }
+    .popup-points {
+      margin-top: 4px;
+      font-size: 0.85rem;
+    }
+    .popup-points ul {
+      padding-left: 18px;
+    }
+    .popup-points li {
+      margin: 1px 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="filters">
+    <span class="label">Filtres domaines&nbsp;:</span>
+    <label><input type="checkbox" data-filter="msq" /> MSQ</label>
+    <label><input type="checkbox" data-filter="neuro" /> Neuro</label>
+    <label><input type="checkbox" data-filter="cardio" /> Cardio-resp</label>
+    <label><input type="checkbox" data-filter="geriatrie" /> Gériatrie</label>
+    <label><input type="checkbox" data-filter="autre" /> Autre spé.</label>
+    <label><input type="checkbox" data-filter="aigu" /> Aigu</label>
+    <label><input type="checkbox" data-filter="readapt" /> Réadaptation</label>
+    <label><input type="checkbox" data-filter="ambulatoire" /> Ambulatoire</label>
+  </div>
+
+  <div id="map"></div>
+
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script>
+    const stages = [
+
+  { "id": 1, "name": "Cabinet ABS Physiothérapie", "address": "Rue des Terreaux 5, 1530 Payerne", "lat": 46.821008760864, "lng": 6.933221047247, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 2, "name": "Aquamed Centres de physiothérapie - Lausanne Malley", "address": "Chemin du Martinet 28, 1007 Lausanne", "lat": 46.524778556323, "lng": 6.604682042545, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 3, "name": "Cabinet de Physiothérapie Les Bioux", "address": "La Grande Partie 2, 1346 Les Bioux", "lat": 46.621, "lng": 6.27026, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 4, "name": "Cabinet de physiothérapie la Colline", "address": "Route de Billens 8, 1680 Romont FR", "lat": 46.692179831067, "lng": 6.912651856855, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 5, "name": "Centre ITS - site de Marly", "address": "Route du Midi 12, 1723 Marly", "lat": 46.781224434628, "lng": 7.150124081946, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 6, "name": "Clinique Bois-Bougy Nyon", "address": "Av. de Bois-Bougy 6, 1260 Nyon", "lat": 46.3726182, "lng": 6.2290099, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 7, "name": "Clinique Bois-Cerf - service de Physiothérapie", "address": "Avenue d'Ouchy 31, 1006 Lausanne", "lat": 46.5133, "lng": 6.6292, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 8, "name": "Clinique romande de réadaptation SUVA - Neurologie", "address": "Av. Grand-Champsec 90, 1950 Sion", "lat": 46.235196173755, "lng": 7.387661488483, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 9, "name": "Clinique romande de réadaptation/service de physio", "address": "Av. Grand-Champsec 90, 1950 Sion", "lat": 46.235196173755, "lng": 7.387661488483, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 10, "name": "Clinique Valmont - Physiothérapie", "address": "Route de Valmont 22, 1823 Glion", "lat": 46.426231263404, "lng": 6.93096748876, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 11, "name": "CHUV-DAL - Physiothérapie - Hôpital orthopédique (DAL6)", "address": "Avenue Pierre-Decker 4, 1011 Lausanne", "lat": 46.5265060204658, "lng": 6.644373706842, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 12, "name": "CHUV-DAL - Physiothérapie - Traumatologie BH14 (DAL6)", "address": "Avenue Pierre-Decker 4, 1011 Lausanne", "lat": 46.5265060204658, "lng": 6.644373706842, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 13, "name": "CHUV-DM - DM16 - Physiothérapie Médecine interne", "address": "Rue du Bugnon 46, 1011 Lausanne", "lat": 46.525394668116, "lng": 6.64259313915, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 14, "name": "CHUV-DNC - DDN6 - Physiothérapie Neurologie-Neurochirurgie", "address": "Rue du Bugnon 46, 1011 Lausanne", "lat": 46.525394668116, "lng": 6.64259313915, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 15, "name": "CHUV-DNC - DDN6 - Physiothérapie Neuroréhabilitation Nestlé", "address": "Rue du Bugnon 46, 1011 Lausanne", "lat": 46.525394668116, "lng": 6.64259313915, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 16, "name": "CHUV-DSCA - Chirurgie - Hospitalisation", "address": "Rue du Bugnon 46, 1011 Lausanne", "lat": 46.525394668116, "lng": 6.64259313915, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 17, "name": "EHC - GO2 Centre romand de chirurgie et médecine du sport", "address": "Campus Léman Bat C Rue Docteur-Yersin 12a, 1110 Morges", "lat": 46.513604012557, "lng": 6.498506714822, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 
+  { "id": 18, "name": "EHC - Hôpital de Morges - Physiothérapie", "address": "Ch. de Crêt 2 Case postale 393, 1110 Morges", "lat": 46.522425185576, "lng": 6.500306856828, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 19, "name": "EHNV - Chamblon - CTR - Physiothérapie", "address": "Rue de l'Hôpital 3, 1436 Chamblon", "lat": 46.779398059835, "lng": 6.609307260536, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 20, "name": "EHNV - Hôpital d'Orbe - Physiothérapie", "address": "Magnenette 2, 1350 Orbe", "lat": 46.731678864, "lng": 6.533484426, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 21, "name": "EHNV - Site d'Yverdon - Physiothérapie", "address": "Rue d'Entremonts 11, 1400 Yverdon-les-Bains", "lat": 46.771666424708, "lng": 6.646736394968, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 22, "name": "EHNV - Hôpital de Saint-Loup - Physiothérapie", "address": "St-Loup 1, 1318 Pompaples", "lat": 46.666310930935, "lng": 6.50338934106, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 23, "name": "En Équilibre Rééducation", "address": "Couvaloup 24, 1110 Morges", "lat": 46.509814325467, "lng": 6.498218744291, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 24, "name": "GHOL - Hôpital de Nyon - Physiothérapie", "address": "Ch. Monastier 10, 1260 Nyon", "lat": 46.383808431988, "lng": 6.227912891713, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 25, "name": "GHOL - Hôpital de Rolle", "address": "Route de l'Hôpital 26, 1180 Rolle", "lat": 46.464272208501, "lng": 6.342962424208, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 26, "name": "HFR - HFR - Physiothérapie", "address": "Chem. des Pensionnats 2/6, 1752 Villars-sur-Glâne", "lat": 46.802493227472, "lng": 7.138322156082, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 27, "name": "HFR - HFR-MEY - Physiotherapie", "address": "Chemin du Village 24, 3280 Meyriez", "lat": 46.922290817333, "lng": 7.10813049558, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 28, "name": "HFR - HFR-RI - Physiothérapie", "address": "Rue de l'Hôpital 9, 1632 Riaz", "lat": 46.641497563869, "lng": 7.059842267567, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 29, "name": "HIB - Site d'Estavayer-le-Lac - Physiothérapie", "address": "Rue de la Rochette, 1470 Estavayer-le-Lac", "lat": 46.85046479952, "lng": 6.856464367999, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 30, "name": "HIB - Site de Payerne - Physiothérapie", "address": "Avenue de la Colline 3 / Case postale 192, 1530 Payerne", "lat": 46.818895347798, "lng": 6.945942261697, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 31, "name": "HRC - Hôpital Riviera Chablais - site providence - Physiothérapie", "address": "Avenue de la Prairie 3, 1800 Vevey", "lat": 46.457919215997, "lng": 6.854642548996, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 32, "name": "HRC - Site de Rennaz - Rennaz 1", "address": "Route du Vieux Sequoia 30, 1847 Rennaz", "lat": 46.37913815788, "lng": 6.919173355088, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 33, "name": "Institution de Lavigny - Physiothérapie", "address": "Route du Vignoble 60, 1175 Lavigny", "lat": 46.503307724606, "lng": 6.411607249832, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 34, "name": "La Source Fitphysio - site clinique La Source", "address": "Avenue Jomini 8, 1004 Lausanne", "lat": 46.528070003971, "lng": 6.627034734295, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 35, "name": "Lavey Médical SA", "address": "Route des Bains 50, 1892 Lavey-les-Bains", "lat": 46.20386624532, "lng": 7.018868078929, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 36, "name": "CHUV-PHY - GER - GERH - Gériatrie aiguë Hospitalisation Nestlé", "address": "Rue du Bugnon 21, 1005 Lausanne", "lat": 46.524789997621, "lng": 6.639625107236, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 37, "name": "Cabinet Physio 7 - Lausanne", "address": "Avenue de l'Avant-Poste 4, 1005 Lausanne", "lat": 46.516950432827, "lng": 6.64227849555, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 38, "name": "Motion Lab Pôle Physiothérapie", "address": "Mont-sur-Lausanne, 1000 Lausanne", "lat": 46.543789844282, "lng": 6.626742960246, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 39, "name": "Cabinet Physiocoss", "address": "Chemin de Champ Vionnet 8, 1304 Cossonay", "lat": 46.620019230349, "lng": 6.507132615199, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 40, "name": "Physio Avenches-Vully", "address": "Route du Pré-Vert 5b, 1580 Avenches", "lat": 46.885726357291, "lng": 7.044598411217, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 41, "name": "Physio Clinics Vaud - Site d'Yverdon", "address": "En Chamard 55, Montagny-Chamard", "lat": 46.790774448076, "lng": 6.619698391748, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 42, "name": "Physio Clinics Vaud - site de Penthalaz", "address": "Route de la Vuy 1, 1305 Penthalaz", "lat": 46.608771805935, "lng": 6.526634202584, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 43, "name": "Physio du Pont des Sauges", "address": "Chemin des Bossons 1/1B, 1018 Lausanne", "lat": 46.535650083469, "lng": 6.620747636361, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 44, "name": "Physio santé sport Cully", "address": "Ch. de Courseboux 7, 1096 Cully", "lat": 46.488327275973, "lng": 6.752875208067, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 45, "name": "Pôle Santé Pays d'Enhaut - PSPE", "address": "Route de l'Hôpital 17, 1660 Château-d'Oex", "lat": 46.477945175244, "lng": 7.140945033551, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 46, "name": "Pôle Santé Vallée de Joux", "address": "Rue de l'Hôpital 3, 1347 Le Sentier", "lat": 46.60179311717, "lng": 6.221275686389, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 47, "name": "Réseau Santé Balcon du Jura", "address": "Rue des Rosiers 29, 1450 Ste-Croix", "lat": 46.819296715231, "lng": 6.49476369214, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 },
+  { "id": 48, "name": "Site de Plein Soleil - Physiothérapie", "address": "Plein Soleil Ch. de la Cigale 3, 1010 Lausanne", "lat": 46.543529675894, "lng": 6.649878360288, "msq": 0, "neuro": 0, "cardio": 0, "geriatrie": 0, "autre": 0, "aigu": 0, "readapt": 0, "ambulatoire": 0 }
+];
+
+    const map = L.map("map");
+    const osmLayer = L.tileLayer(
+      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+      }
+    );
+    osmLayer.addTo(map);
+
+    const markerCluster = L.markerClusterGroup();
+    const stageMarkers = [];
+
+    function buildPopupContent(stage) {
+      let html = `<div class="popup-content">`;
+      html += `<div class="popup-title">${stage.name}</div>`;
+      html += `<div class="popup-address">${stage.address}</div>`;
+
+      const items = [];
+      if (stage.msq > 0) items.push(`MSQ&nbsp;: ${stage.msq}`);
+      if (stage.neuro > 0) items.push(`Neuro&nbsp;: ${stage.neuro}`);
+      if (stage.cardio > 0) items.push(`Cardio-resp&nbsp;: ${stage.cardio}`);
+      if (stage.geriatrie > 0) items.push(`Gériatrie&nbsp;: ${stage.geriatrie}`);
+      if (stage.autre > 0) items.push(`Autre spé.&nbsp;: ${stage.autre}`);
+      if (stage.aigu > 0) items.push(`Aigu&nbsp;: ${stage.aigu}`);
+      if (stage.readapt > 0) items.push(`Réadaptation&nbsp;: ${stage.readapt}`);
+      if (stage.ambulatoire > 0) items.push(`Ambulatoire&nbsp;: ${stage.ambulatoire}`);
+
+      if (items.length > 0) {
+        html += `<div class="popup-points"><strong>Points par domaine :</strong><ul>`;
+        for (const it of items) html += `<li>${it}</li>`;
+        html += `</ul></div>`;
+      } else {
+        html += `<div class="popup-points"><em>Aucun point de domaine renseigné.</em></div>`;
+      }
+
+      html += `</div>`;
+      return html;
+    }
+
+    stages.forEach((stage) => {
+      const marker = L.marker([stage.lat, stage.lng]);
+      marker.bindPopup(buildPopupContent(stage));
+      stageMarkers.push({ stage, marker });
+      markerCluster.addLayer(marker);
+    });
+
+    map.addLayer(markerCluster);
+
+    if (stageMarkers.length > 0) {
+      const bounds = markerCluster.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds.pad(0.1));
+      } else {
+        map.setView([46.7, 6.6], 9);
+      }
+    } else {
+      map.setView([46.7, 6.6], 9);
+    }
+
+    const filterCheckboxes = document.querySelectorAll("#filters input[type=checkbox]");
+
+    function applyFilters() {
+      const activeFilters = Array.from(filterCheckboxes)
+        .filter((cb) => cb.checked)
+        .map((cb) => cb.dataset.filter);
+
+      markerCluster.clearLayers();
+
+      stageMarkers.forEach(({
+        stage,
+        marker
+      }) => {
+        let keep = true;
+        if (activeFilters.length > 0) {
+          keep = activeFilters.every((key) => stage[key] && stage[key] > 0);
+        }
+        if (keep) markerCluster.addLayer(marker);
+      });
+    }
+
+    filterCheckboxes.forEach((cb) => {
+      cb.addEventListener("change", applyFilters);
+    });
+
+    // Show all markers by default
+    applyFilters();
+  </script>
+</body>
+</html>
